@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import gestures
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
@@ -69,22 +70,6 @@ def image_tutorial():
   cv2.waitKey(0)
   cv2.destroyAllWindows()
 
-def is_open_hand(lm):
-    return (
-        lm[8].y < lm[6].y and   # index up
-        lm[12].y < lm[10].y and # middle up
-        lm[16].y < lm[14].y and # ring up
-        lm[20].y < lm[18].y     # pinky up
-    )
-
-def is_peace_sign(lm):
-   return(
-      lm[8].y < lm[6].y and   # index up
-      lm[12].y < lm[10].y and # middle up
-      lm[16].y > lm[14].y and # ring up
-      lm[20].y > lm[18].y     # pinky up
-   )
-
 # Create detector once
 base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
 options = vision.HandLandmarkerOptions(base_options=base_options, num_hands=2)
@@ -108,9 +93,9 @@ while True:
 
     if detection_result.hand_landmarks:
       for hand in detection_result.hand_landmarks:
-          if is_open_hand(hand):
+          if gestures.is_open_hand(hand):
               print("OPEN HAND")
-          if is_peace_sign(hand):
+          if gestures.is_peace_sign(hand):
              print("PEACE EVERYBODY!")
 
     # Draw result
