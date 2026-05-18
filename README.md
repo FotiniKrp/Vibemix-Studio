@@ -5,3 +5,5 @@ Video Branch
 
 
 Audio Branch
+
+βιβλιοθήκες: sounddevice, pedalboard, vocoder
