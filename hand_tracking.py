@@ -62,7 +62,7 @@ def image_tutorial():
 
   # Detect hand landmarks from the input image.
   detection_result = detector.detect(image)
-  # print(detection_result)
+  print(detection_result)
 
   # Process the classification result. In this case, visualize it.
   annotated_image = draw_landmarks_on_image(image.numpy_view(), detection_result)
@@ -93,10 +93,16 @@ while True:
 
     if detection_result.hand_landmarks:
       for hand in detection_result.hand_landmarks:
-          if gestures.is_open_hand(hand):
-              print("OPEN HAND")
-          if gestures.is_peace_sign(hand):
-             print("PEACE EVERYBODY!")
+          # if gestures.is_open_hand(hand):
+          #     print("OPEN HAND")
+          # if gestures.is_peace_sign(hand):
+          #    print("PEACE EVERYBODY!")
+          # print("Hand Openness:", gestures.hand_openness(hand))
+          # print("Pinch Value:", gestures.pinch_value(hand))
+          if gestures.is_pinch_gesture(hand):
+              print("PINCHING")
+          if gestures.is_hand_openness_gesture(hand):
+              print("OPEN HAND GRADIENT")
 
     # Draw result
     annotated = draw_landmarks_on_image(rgb_frame, detection_result)
@@ -111,3 +117,5 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
+# image_tutorial()
