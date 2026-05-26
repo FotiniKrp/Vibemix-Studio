@@ -20,6 +20,23 @@ def is_peace_sign(lm):
       lm[20].y > lm[18].y     # pinky up
    )
 
+def is_horns_gesture(lm):
+    return (
+        lm[8].y < lm[6].y and    # index up
+        lm[20].y < lm[18].y and  # pinky up
+        lm[12].y > lm[10].y and  # middle down
+        lm[16].y > lm[14].y     # ring down
+    )
+
+def is_shaka_gesture(lm):
+    return (
+        lm[4].x < lm[3].x and   # thumb extended sideways
+        lm[20].y < lm[18].y and # pinky up
+        lm[8].y > lm[6].y and   # index down
+        lm[12].y > lm[10].y and # middle down
+        lm[16].y > lm[14].y     # ring down
+    )
+
 global_min_open = float("inf")
 global_max_open = float("-inf")
 def is_hand_openness_gesture(lm):
@@ -83,13 +100,13 @@ def pinch_value(lm):
 
     return max(0.0, min(1.0, pinch))
 
-def react_to_gesture(detection_result):
-    if detection_result.hand_landmarks:
-      for i in range(len(detection_result.hand_landmarks)):
-            hand_landmarks = detection_result.hand_landmarks[i]
-            print("Hand Openness:", hand_openness(hand_landmarks))
-            # label = detection_result.handedness[i][0].display_name
-            # if is_open_hand(hand_landmarks):
-            #     print("OPEN HAND")
-            # if is_peace_sign(hand_landmarks):
-            #     print("PEACE EVERYBODY!")
+# def react_to_gesture(detection_result):
+#     if detection_result.hand_landmarks:
+#       for i in range(len(detection_result.hand_landmarks)):
+#             hand_landmarks = detection_result.hand_landmarks[i]
+#             print("Hand Openness:", hand_openness(hand_landmarks))
+#             label = detection_result.handedness[i][0].display_name
+#             if is_open_hand(hand_landmarks):
+#                 print("OPEN HAND")
+#             if is_peace_sign(hand_landmarks):
+#                 print("PEACE EVERYBODY!")
