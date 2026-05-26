@@ -4,6 +4,9 @@ import numpy as np
 import gestures
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+from pythonosc.udp_client import SimpleUDPClient
+
+client = SimpleUDPClient("127.0.0.1", 9000)  # IP and port of the receiver
 
 mp_hands = mp.tasks.vision.HandLandmarksConnections
 mp_drawing = mp.tasks.vision.drawing_utils
@@ -12,7 +15,15 @@ mp_drawing_styles = mp.tasks.vision.drawing_styles
 MARGIN = 10  # pixels
 FONT_SIZE = 1
 FONT_THICKNESS = 1
-HANDEDNESS_TEXT_COLOR = (88, 205, 54) # vibrant green
+HANDEDNESS_TEXT_COLOR = (255, 186, 22)
+
+custom_landmark_style = mp_drawing_styles.get_default_hand_landmarks_style()
+custom_connection_style = mp_drawing_styles.get_default_hand_connections_style()
+for i in custom_landmark_style:
+    custom_landmark_style[i].color = (232, 237, 237)
+for i in custom_connection_style:
+    custom_connection_style[i].color = (232, 237, 237)
+    custom_connection_style[i].thickness = 2
 
 def draw_landmarks_on_image(rgb_image, detection_result):
   hand_landmarks_list = detection_result.hand_landmarks
@@ -29,11 +40,21 @@ def draw_landmarks_on_image(rgb_image, detection_result):
       annotated_image,
       hand_landmarks,
       mp_hands.HAND_CONNECTIONS,
-      mp_drawing_styles.get_default_hand_landmarks_style(),
-      mp_drawing_styles.get_default_hand_connections_style())
+      custom_landmark_style,
+      custom_connection_style)
+    
+    height, width, _ = annotated_image.shape
+
+    # Thumb tip and Index finger tip
+    thumb_tip = hand_landmarks[4]; index_tip = hand_landmarks[8]
+
+    thumb_x = int(thumb_tip.x * width); thumb_y = int(thumb_tip.y * height)
+    index_x = int(index_tip.x * width); index_y = int(index_tip.y * height)
+
+    # Draw line between thumb and index finger
+    cv2.line(annotated_image, (thumb_x, thumb_y), (index_x, index_y), (101, 242, 91), 2)
 
     # Get the top left corner of the detected hand's bounding box.
-    height, width, _ = annotated_image.shape
     x_coordinates = [landmark.x for landmark in hand_landmarks]
     y_coordinates = [landmark.y for landmark in hand_landmarks]
     text_x = int(min(x_coordinates) * width)
@@ -92,17 +113,35 @@ while True:
     detection_result = detector.detect(mp_image)
 
     if detection_result.hand_landmarks:
+      is_open_hand = False; is_pinching = False; is_open_hand_gradient = False
+      is_horns = False; is_shaka = False
       for hand in detection_result.hand_landmarks:
-          # if gestures.is_open_hand(hand):
-          #     print("OPEN HAND")
-          # if gestures.is_peace_sign(hand):
-          #    print("PEACE EVERYBODY!")
-          # print("Hand Openness:", gestures.hand_openness(hand))
-          # print("Pinch Value:", gestures.pinch_value(hand))
-          if gestures.is_pinch_gesture(hand):
-              print("PINCHING")
-          if gestures.is_hand_openness_gesture(hand):
-              print("OPEN HAND GRADIENT")
+
+        if not is_open_hand:
+          is_open_hand = gestures.is_open_hand(hand)
+        if not is_pinching:
+          is_pinching = gestures.is_pinch_gesture(hand)
+          pinch_value = gestures.pinch_value(hand)
+        if not is_open_hand_gradient:
+          is_open_hand_gradient = gestures.is_hand_openness_gesture(hand)
+          hand_openness_value = gestures.hand_openness(hand)
+        if not is_horns:
+           is_horns = gestures.is_horns_gesture(hand)
+        if not is_shaka:
+           is_shaka = gestures.is_shaka_gesture(hand)
+
+      client.send_message("/is_open_hand", int(is_open_hand))  # Send if open hand or not
+      if is_pinching:
+        client.send_message("/pinch_value", float(pinch_value))  # Send pinch value
+      if is_open_hand_gradient:
+        client.send_message("/hand_openness_value", float(hand_openness_value))  # Send hand openness value
+      if is_horns:
+        client.send_message("/is_horns", int(is_horns))  # Send if horns gesture detected
+        print("HORNS GESTURE DETECTED")
+      if is_shaka:
+        client.send_message("/is_shaka", int(is_shaka))  # Send if shaka gesture detected
+        print("SHAKA GESTURE DETECTED")
+      # print(f"Sent is_open_hand: {is_open_hand}")  # Print the sent value and its type  
 
     # Draw result
     annotated = draw_landmarks_on_image(rgb_frame, detection_result)
