@@ -25,7 +25,7 @@ for i in custom_connection_style:
     custom_connection_style[i].color = (232, 237, 237)
     custom_connection_style[i].thickness = 2
 
-def draw_landmarks_on_image(rgb_image, detection_result):
+def draw_landmarks_on_image(rgb_image, detection_result, is_pinch=False, parallel_palms=False):
   hand_landmarks_list = detection_result.hand_landmarks
   handedness_list = detection_result.handedness
   annotated_image = np.copy(rgb_image)
@@ -45,14 +45,15 @@ def draw_landmarks_on_image(rgb_image, detection_result):
     
     height, width, _ = annotated_image.shape
 
-    # Thumb tip and Index finger tip
-    thumb_tip = hand_landmarks[4]; index_tip = hand_landmarks[8]
+    if is_pinch:
+      # Thumb tip and Index finger tip
+      thumb_tip = hand_landmarks[4]; index_tip = hand_landmarks[8]
 
-    thumb_x = int(thumb_tip.x * width); thumb_y = int(thumb_tip.y * height)
-    index_x = int(index_tip.x * width); index_y = int(index_tip.y * height)
+      thumb_x = int(thumb_tip.x * width); thumb_y = int(thumb_tip.y * height)
+      index_x = int(index_tip.x * width); index_y = int(index_tip.y * height)
 
-    # Draw line between thumb and index finger
-    cv2.line(annotated_image, (thumb_x, thumb_y), (index_x, index_y), (101, 242, 91), 2)
+      # Draw line between thumb and index finger
+      cv2.line(annotated_image, (thumb_x, thumb_y), (index_x, index_y), (101, 242, 91), 2)
 
     # Get the top left corner of the detected hand's bounding box.
     x_coordinates = [landmark.x for landmark in hand_landmarks]
@@ -64,6 +65,14 @@ def draw_landmarks_on_image(rgb_image, detection_result):
     cv2.putText(annotated_image, f"{handedness[0].category_name}",
                 (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
                 FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS, cv2.LINE_AA)
+    
+  if parallel_palms:
+    lm1_palm = detection_result.hand_landmarks[0][9]; lm2_palm = detection_result.hand_landmarks[1][9]
+
+    lm1_x = int(lm1_palm.x * width); lm1_y = int(lm1_palm.y * height)
+    lm2_x = int(lm2_palm.x * width); lm2_y = int(lm2_palm.y * height)
+
+    cv2.line(annotated_image, (lm1_x, lm1_y), (lm2_x, lm2_y), (101, 242, 91), 2)
 
   return annotated_image
 
@@ -112,39 +121,53 @@ while True:
     # Detect hands
     detection_result = detector.detect(mp_image)
 
-    if detection_result.hand_landmarks:
-      is_open_hand = False; is_pinching = False; is_open_hand_gradient = False
-      is_horns = False; is_shaka = False
-      for hand in detection_result.hand_landmarks:
+    is_fist = False; is_pinch = False; is_open_hand_gradient = False
+    is_horns = False; is_shaka = False; parallel_palms = False; is_peace = False
 
-        if not is_open_hand:
-          is_open_hand = gestures.is_open_hand(hand)
-        if not is_pinching:
-          is_pinching = gestures.is_pinch_gesture(hand)
+    if detection_result.hand_landmarks:
+      for i, hand in enumerate(detection_result.hand_landmarks):
+        hand_label = detection_result.handedness[i][0].category_name
+
+        if not is_fist:
+          is_fist = gestures.is_fist(hand_label == "Right", hand)
+        if not is_pinch:
+          is_pinch = gestures.is_pinch_gesture(hand)
           pinch_value = gestures.pinch_value(hand)
         if not is_open_hand_gradient:
           is_open_hand_gradient = gestures.is_hand_openness_gesture(hand)
-          hand_openness_value = gestures.hand_openness(hand)
+          hand_openness_value = gestures.hand_openness_value(hand)
         if not is_horns:
-           is_horns = gestures.is_horns_gesture(hand)
+          is_horns = gestures.is_horns_gesture(hand_label == "Right", hand)
         if not is_shaka:
-           is_shaka = gestures.is_shaka_gesture(hand)
+          is_shaka = gestures.is_shaka_gesture(hand_label == "Right", hand)
+        if not is_peace:
+          is_peace = gestures.is_peace_sign(hand_label == "Right", hand)
 
-      client.send_message("/is_open_hand", int(is_open_hand))  # Send if open hand or not
-      if is_pinching:
+      if len(detection_result.hand_landmarks) == 2:
+        hand1 = detection_result.hand_landmarks[0]
+        hand2 = detection_result.hand_landmarks[1]
+        if gestures.open_palms_parallel(hand1, hand2):
+          parallel_palms = True; is_open_hand_gradient = False  # Override open hand if parallel palms detected
+          distance = gestures.hands_distance(hand1, hand2)
+          print(f"Open palms parallel detected! Distance: {distance:.2f}")
+
+      if is_fist:
+        client.send_message("/is_fist", int(is_fist))  # Send if fist detected
+      if is_pinch:
         client.send_message("/pinch_value", float(pinch_value))  # Send pinch value
       if is_open_hand_gradient:
         client.send_message("/hand_openness_value", float(hand_openness_value))  # Send hand openness value
       if is_horns:
         client.send_message("/is_horns", int(is_horns))  # Send if horns gesture detected
-        print("HORNS GESTURE DETECTED")
       if is_shaka:
         client.send_message("/is_shaka", int(is_shaka))  # Send if shaka gesture detected
-        print("SHAKA GESTURE DETECTED")
-      # print(f"Sent is_open_hand: {is_open_hand}")  # Print the sent value and its type  
+      if parallel_palms:
+        client.send_message("/parallel_palms_distance", float(distance))  # Send distance between parallel palms
+      if is_peace:
+        client.send_message("/is_peace", int(is_peace))  # Send if peace sign detected
 
     # Draw result
-    annotated = draw_landmarks_on_image(rgb_frame, detection_result)
+    annotated = draw_landmarks_on_image(rgb_frame, detection_result, is_pinch, parallel_palms)
 
     # Convert back to OpenCV format
     annotated_bgr = cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR)
