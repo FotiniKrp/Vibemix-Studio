@@ -4,6 +4,10 @@ import itertools
 def distance(a, b):
     return math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2)
 
+def palm_facing_camera(lm):
+    # Check if the palm is facing the camera by comparing the z-coordinates of the wrist and thumb tip
+    return lm[17].z < lm[4].z
+
 def is_open_hand(lm):
     return (
         lm[8].y < lm[6].y and   # index up
@@ -12,40 +16,66 @@ def is_open_hand(lm):
         lm[20].y < lm[18].y     # pinky up
     )
 
-def is_peace_sign(lm):
+def is_fist(is_hand_right, lm):
+    return (
+        lm[8].y > lm[5].y and   # index down
+        lm[12].y > lm[9].y and  # middle down
+        lm[16].y > lm[13].y and # ring down
+        lm[20].y > lm[17].y and # pinky down
+        (lm[4].x < lm[1].x if is_hand_right 
+         else lm[4].x > lm[1].x)  # thumb tucked
+    )
+
+def is_peace_sign(is_hand_right, lm):
    return(
       lm[8].y < lm[6].y and   # index up
       lm[12].y < lm[10].y and # middle up
       lm[16].y > lm[14].y and # ring up
-      lm[20].y > lm[18].y     # pinky up
+      lm[20].y > lm[18].y and # pinky up
+      (lm[4].x < lm[1].x if is_hand_right 
+       else lm[4].x > lm[1].x)  # thumb tucked
    )
 
-def is_horns_gesture(lm):
+def is_horns_gesture(is_hand_right, lm):
     return (
         lm[8].y < lm[6].y and    # index up
         lm[20].y < lm[18].y and  # pinky up
         lm[12].y > lm[10].y and  # middle down
-        lm[16].y > lm[14].y     # ring down
+        lm[16].y > lm[14].y and  # ring down
+        (lm[4].x < lm[1].x if is_hand_right 
+         else lm[4].x > lm[1].x)  # thumb tucked
     )
 
-def is_shaka_gesture(lm):
+def is_shaka_gesture(is_hand_right, lm):
     return (
-        lm[4].x < lm[3].x and   # thumb extended sideways
-        lm[20].y < lm[18].y and # pinky up
-        lm[8].y > lm[6].y and   # index down
-        lm[12].y > lm[10].y and # middle down
-        lm[16].y > lm[14].y     # ring down
+        lm[4].y < lm[3].y and   # thumb extended upwards
+        (lm[6].x < lm[8].x if not is_hand_right 
+         else lm[6].x > lm[8].x) and # index tucked
+        (lm[10].x < lm[12].x if not is_hand_right 
+        else lm[10].x > lm[12].x) and # middle tucked
+        (lm[14].x < lm[16].x if not is_hand_right 
+        else lm[14].x > lm[16].x) and # ring tucked
+        (lm[20].x < lm[18].x if not is_hand_right 
+        else lm[20].x > lm[18].x)  # pinky extended outwards
     )
 
-global_min_open = float("inf")
-global_max_open = float("-inf")
+def open_palms_parallel(lm1, lm2):
+    return (palm_facing_camera(lm1) and is_open_hand(lm1) and 
+            palm_facing_camera(lm2) and is_open_hand(lm2))
+def hands_distance(lm1, lm2):
+    dist = abs(lm1[9].x - lm2[9].x)
+
+    min_d = 0.0; max_d = 0.8
+    norm = (dist - min_d) / (max_d - min_d)
+
+    return max(0.0, min(1.0, norm))
+
 def is_hand_openness_gesture(lm):
     return (lm[12].y < lm[9].y and  # middle stretched
             lm[16].y < lm[13].y and  # ring stretched
             lm[20].y < lm[17].y)     # pinky stretched
-
-def hand_openness(lm):
-    global global_min_open, global_max_open
+def hand_openness_value(lm):
+    MIN_OPEN = 0.20; MAX_OPEN = 1.05
     fingertips = [
         lm[4],   # thumb
         lm[8],   # index
@@ -61,52 +91,24 @@ def hand_openness(lm):
 
     avg_distance = sum(distances) / len(distances)
     # normalize with palm size
-    palm_size = distance(lm[0], lm[9])
-    normalized = avg_distance / palm_size
-
-    # dynamic calibration
-    global_min_open = min(global_min_open, normalized)
-    global_max_open = max(global_max_open, normalized)
-
-    openness = ((normalized - global_min_open) / (global_max_open - global_min_open)) if global_max_open > global_min_open else 0.0
+    palm_size = distance(lm[0], lm[5])
+    ratio = avg_distance / palm_size
+    openness = (ratio - MIN_OPEN) / (MAX_OPEN - MIN_OPEN)
 
     return max(0.0, min(1.0, openness))
 
-global_min_pinch = float("inf")
-global_max_pinch = float("-inf")
 def is_pinch_gesture(lm):
-    return (lm[12].y > lm[9].y and  # middle tucked
+    return (lm[12].y > lm[9].y and   # middle tucked
             lm[16].y > lm[13].y and  # ring tucked
-            lm[20].y > lm[17].y)     # pinky tucked
-
+            lm[20].y > lm[17].y and  # pinky tucked
+            lm[8].y < lm[5].y)         # index up
 def pinch_value(lm):
-    global global_min_pinch, global_max_pinch
     thumb = lm[4]
     index = lm[8]
-    dist = distance(thumb, index)
+    thumb_index = distance(thumb, index)
 
     # normalize with palm size
-    palm_size = distance(lm[0], lm[9])
-    normalized = dist / palm_size
+    palm_size = distance(lm[0], lm[5])
+    pinch = thumb_index  / palm_size
 
-    # calibration
-    global_min_pinch = min(global_min_pinch, normalized)
-    global_max_pinch = max(global_max_pinch, normalized)
-
-    pinch = (normalized - global_min_pinch) / (global_max_pinch - global_min_pinch) if global_max_pinch > global_min_pinch else 0.0
-
-    # invert (θέλουμε touching = 1)
-    pinch = 1.0 - pinch
-
-    return max(0.0, min(1.0, pinch))
-
-# def react_to_gesture(detection_result):
-#     if detection_result.hand_landmarks:
-#       for i in range(len(detection_result.hand_landmarks)):
-#             hand_landmarks = detection_result.hand_landmarks[i]
-#             print("Hand Openness:", hand_openness(hand_landmarks))
-#             label = detection_result.handedness[i][0].display_name
-#             if is_open_hand(hand_landmarks):
-#                 print("OPEN HAND")
-#             if is_peace_sign(hand_landmarks):
-#                 print("PEACE EVERYBODY!")
+    return 1.0 - min(pinch / 1.15, 1.0)
