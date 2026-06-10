@@ -15,15 +15,13 @@ protected:
         (void) remoteEndpoint; // suppress unused parameter warning
 
         try{
-            if( strcmp( m.AddressPattern(), "/is_open_hand" ) == 0 ){
+            if( strcmp( m.AddressPattern(), "/is_fist" ) == 0 ){
                 osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
-                osc::int32 is_open_hand;
-                args >> is_open_hand >> osc::EndMessage;
+                osc::int32 is_fist;
+                args >> is_fist >> osc::EndMessage;
                 
-                if (is_open_hand)
-                    cout << "OPEN HAND" << endl;
-                else
-                    cout << "NO OPEN HAND" << endl;
+                if (is_fist)
+                    cout << "FIST DETECTED" << endl;
             }
             else if( strcmp( m.AddressPattern(), "/pinch_value" ) == 0 ){
                 osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
@@ -38,6 +36,37 @@ protected:
                 args >> hand_openness_value >> osc::EndMessage;
                 
                 cout << "Hand openness value: " << hand_openness_value << endl;
+            }
+            else if( strcmp( m.AddressPattern(), "/is_horns" ) == 0 ){
+                osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
+                osc::int32 is_horns;
+                args >> is_horns >> osc::EndMessage;
+                
+                if (is_horns)
+                    cout << "HORNS GESTURE" << endl;
+            }
+            else if( strcmp( m.AddressPattern(), "/is_shaka" ) == 0 ){
+                osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
+                osc::int32 is_shaka;
+                args >> is_shaka >> osc::EndMessage;
+                
+                if (is_shaka)
+                    cout << "TELEPHONE!" << endl;
+            }
+            else if ( strcmp( m.AddressPattern(), "/parallel_palms_distance" ) == 0 ){
+                osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
+                float parallel_palms_distance;
+                args >> parallel_palms_distance >> osc::EndMessage;
+                
+                cout << "Distance between parallel palms: " << parallel_palms_distance << endl;
+            }
+            else if ( strcmp( m.AddressPattern(), "/is_peace" ) == 0 ){
+                osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
+                osc::int32 is_peace;
+                args >> is_peace >> osc::EndMessage;
+                
+                if (is_peace)
+                    cout << "PEACE SIGN!" << endl;
             }
             else {
                 cout << "Unknown message received: " << m.AddressPattern() << endl;
