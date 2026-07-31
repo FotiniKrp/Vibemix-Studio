@@ -26,7 +26,7 @@ public:
 private:
     //==============================================================================
     // Your private member variables go here...
-    juce::AudioDeviceManager myDeviceManager;
-	std::unique_ptr<juce::AudioDeviceSelectorComponent> audioSetupComp;
+
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
