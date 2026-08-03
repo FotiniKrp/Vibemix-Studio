@@ -15,3 +15,5 @@ JUCE framework(C++) επικοινωνεί απευθείας με hardware
 
 Επίσης, το JUCE δημιουργεί ένα "αόρατο" παράθυρο browser (χρησιμοποιώντας το WebView2 στα Windows ή το WKWebView στο Mac) μέσα στο .exe. Μέσα σε αυτό το παράθυρο, φορτώνει το React App.
 Πώς μιλάνε μεταξύ τους: Το JUCE σου δίνει μια "γέφυρα" (JavaScript Bridge). Μέσα στο React, καλείς συναρτήσεις JavaScript (π.χ. window.juce.sendParameter('gain', 0.8)), και το JUCE τις πιάνει ακαριαία στη C++ για να αλλάξει τον ήχο!
+
+- web sockets για επικοινωνία python output με react app!! to do
