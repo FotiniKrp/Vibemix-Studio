@@ -1,8 +1,7 @@
 #include "MainComponent.h"
 
 //==============================================================================
-MainComponent::MainComponent() : juce::AudioAppComponent(myDeviceManager),
-    oscReceiver()
+MainComponent::MainComponent() : juce::AudioAppComponent(myDeviceManager)
 {
 	myDeviceManager.initialise(2, 2, nullptr, true);
     audioSetupComp.reset(new juce::AudioDeviceSelectorComponent(myDeviceManager, 0, 2, 0, 2, true, true, true, true));
@@ -21,25 +20,12 @@ MainComponent::MainComponent() : juce::AudioAppComponent(myDeviceManager),
         // Specify the number of input and output channels that we want to open
         setAudioChannels (2, 2);
     }
-
-	if (!oscReceiver.connect(7000))
-	{
-		juce::Logger::writeToLog("Error: could not connect to UDP port 7000.");
-	}
-	else
-	{
-        juce::Logger::writeToLog("Listening for OSC messages on UDP port 7000.");
-		oscReceiver.addListener(this, "/number");
-	}
     setSize(1000, 600);
   
 }
 
 MainComponent::~MainComponent()
 {
-	oscReceiver.removeListener(this);
-	oscReceiver.disconnect();
-
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
@@ -92,22 +78,4 @@ void MainComponent::paint (juce::Graphics& g)
 void MainComponent::resized()
 {
 	audioSetupComp->setBounds(getLocalBounds());
-}
-
-void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
-{
-	if (message.getAddressPattern().toString() == "/number")
-	{
-		if (message.size() > 0 && message[0].isInt32())
-		{
-			int receivedValue = message[0].getInt32();
-			juce::Logger::writeToLog("Received OSC message: " + juce::String(receivedValue));
-            // Επειδή βάλαμε MessageLoopCallback, μπορείς να πειράξεις UI elements απευθείας:
-            // mySlider.setValue(myFeature);
-		}
-		else
-		{
-			juce::Logger::writeToLog("Received OSC message with unexpected data type or size.");
-		}
-	}
 }
