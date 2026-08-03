@@ -1,0 +1,6 @@
+{
+  "name": "VibeMix Studio",
+  "description": "A clean and vibrant gesture-controlled audio mixing and recording station for podcasters and musicians.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
