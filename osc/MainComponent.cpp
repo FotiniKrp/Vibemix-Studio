@@ -1,57 +1,51 @@
 #include "MainComponent.h"
 
 //==============================================================================
-MainComponent::MainComponent()
+MainComponent::MainComponent() : juce::AudioAppComponent(myDeviceManager),
+    oscReceiver()
 {
-    audioSettings = std::make_unique<juce::AudioDeviceSelectorComponent>(
-        deviceManager,
-        0, 2,
-        0, 2,
-        true,
-        true,
-        true,
-        false
-    );
-
-    addAndMakeVisible(audioSettings.get());
-
+	myDeviceManager.initialise(2, 2, nullptr, true);
+    audioSetupComp.reset(new juce::AudioDeviceSelectorComponent(myDeviceManager, 0, 2, 0, 2, true, true, true, true));
+	addAndMakeVisible(audioSetupComp.get());
     // Make sure you set the size of the component after
     // you add any child components.
-    setSize(800, 600);
-
     // Some platforms require permissions to open input channels so request that here
-    if (juce::RuntimePermissions::isRequired(juce::RuntimePermissions::recordAudio)
-        && !juce::RuntimePermissions::isGranted(juce::RuntimePermissions::recordAudio))
+    if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
+        && ! juce::RuntimePermissions::isGranted (juce::RuntimePermissions::recordAudio))
     {
-        juce::RuntimePermissions::request(juce::RuntimePermissions::recordAudio,
-            [&](bool granted) { setAudioChannels(granted ? 2 : 0, 2); });
+        juce::RuntimePermissions::request (juce::RuntimePermissions::recordAudio,
+                                           [&] (bool granted) { setAudioChannels (granted ? 2 : 0, 2); });
     }
     else
     {
         // Specify the number of input and output channels that we want to open
-        setAudioChannels(2, 2);
+        setAudioChannels (2, 2);
     }
 
-    if (!oscReceiver.connect(9000))
-    {
-		DBG("Error: Could not connect to UDP port 9000.");
-    }
-    else
-    {
-		DBG("Listening for OSC messages on UDP port 9000.");
-    }
-
-	oscReceiver.addListener(this, "/test");
+	if (!oscReceiver.connect(7000))
+	{
+		DBG("Error: could not connect to UDP port 7000.");
+	}
+	else
+	{
+        DBG("Listening for OSC messages on UDP port 7000.");
+		oscReceiver.addListener(this, "/number");
+	}
+    setSize(1000, 600);
+  
 }
 
 MainComponent::~MainComponent()
 {
+	oscReceiver.removeListener(this);
+	oscReceiver.disconnect();
+
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
 
 //==============================================================================
-void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
+void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
     // This function will be called when the audio device is started, or when
     // its settings (i.e. sample rate, block size, etc) are changed.
@@ -62,24 +56,7 @@ void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate
     // For more details, see the help for AudioProcessor::prepareToPlay()
 }
 
-void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
-{
-    if (message.size() > 0)
-    {
-        if (message[0].isInt32())
-        {
-			int value = message[0].getInt32();
-			DBG("Received int: " << value);
-        }
-        else if (message[0].isFloat32())
-        {
-			float value = message[0].getFloat32();
-			DBG("Received float: " << value);
-        }
-    }
-}
-
-void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
+void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
     // Your audio-processing code goes here!
 
@@ -87,27 +64,11 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
 
     // Right now we are not producing any data, in which case we need to clear the buffer
     // (to prevent the output of random noise)
-    // bufferToFill.clearActiveBufferRegion();
+    auto& inputBuffer = *bufferToFill.buffer;
 
-    auto* inputBuffer = bufferToFill.buffer;
-	auto* device = deviceManager.getCurrentAudioDevice();
-
-	if (device == nullptr)
-		return;
-
-	auto inputChannels = device->getActiveInputChannels();
-	auto outputChannels = device->getActiveOutputChannels();
-
-    // Αντιγραφή input -> output
-    for (int channel = 0; channel < inputBuffer->getNumChannels(); ++channel)
+    for (int channel = 0; channel < bufferToFill.buffer->getNumChannels(); ++channel)
     {
-        if (outputChannels[channel])
-        {
-            if (!inputChannels[channel])
-            {
-                inputBuffer->clear(channel, bufferToFill.startSample, bufferToFill.numSamples);
-            }
-        }
+        bufferToFill.buffer->copyFrom(channel, bufferToFill.startSample, inputBuffer, channel, bufferToFill.startSample, bufferToFill.numSamples);
     }
 }
 
@@ -120,26 +81,32 @@ void MainComponent::releaseResources()
 }
 
 //==============================================================================
-/*void MainComponent::paint(juce::Graphics& g)
+void MainComponent::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
     // You can add your drawing code here!
-}*/
-
-void MainComponent::paint(juce::Graphics& g)
-{
-    g.fillAll(juce::Colours::darkgrey);
-
-    g.setColour(juce::Colours::white);
-    g.setFont(40.0f);
 }
 
 void MainComponent::resized()
 {
-    // This is called when the MainContentComponent is resized.
-    // If you add any child components, this is where you should
-    // update their positions.
-    audioSettings->setBounds(0, 0, getWidth(), getHeight());
+	audioSetupComp->setBounds(getLocalBounds());
+}
+
+void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
+{
+	if (message.size() > 0)
+    {
+        if (message[0].isInt32())
+        {
+			int value = message[0].getInt32();
+			DBG("Received int: " << value);
+        }
+        else if (message[0].isFloat32())
+        {
+			float value = message[0].getFloat32();
+			DBG("Received float: " << value);
+        }
+    }
 }
