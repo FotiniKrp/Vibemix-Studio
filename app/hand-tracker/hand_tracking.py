@@ -15,7 +15,7 @@ app = FastAPI()
 latest_frame = None
 frame_lock = threading.Lock()
 
-client = SimpleUDPClient("127.0.0.1", 9000)
+client = SimpleUDPClient("127.0.0.1", 7000)
 
 mp_hands = mp.tasks.vision.HandLandmarksConnections
 mp_drawing = mp.tasks.vision.drawing_utils
