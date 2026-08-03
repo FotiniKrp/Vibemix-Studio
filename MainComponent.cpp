@@ -2,51 +2,50 @@
 
 //==============================================================================
 MainComponent::MainComponent() : juce::AudioAppComponent(myDeviceManager),
-    oscReceiver()
+oscReceiver()
 {
-	myDeviceManager.initialise(2, 2, nullptr, true);
+    myDeviceManager.initialise(2, 2, nullptr, true);
     audioSetupComp.reset(new juce::AudioDeviceSelectorComponent(myDeviceManager, 0, 2, 0, 2, true, true, true, true));
-	addAndMakeVisible(audioSetupComp.get());
+    addAndMakeVisible(audioSetupComp.get());
     // Make sure you set the size of the component after
     // you add any child components.
     // Some platforms require permissions to open input channels so request that here
-    if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
-        && ! juce::RuntimePermissions::isGranted (juce::RuntimePermissions::recordAudio))
+    if (juce::RuntimePermissions::isRequired(juce::RuntimePermissions::recordAudio)
+        && !juce::RuntimePermissions::isGranted(juce::RuntimePermissions::recordAudio))
     {
-        juce::RuntimePermissions::request (juce::RuntimePermissions::recordAudio,
-                                           [&] (bool granted) { setAudioChannels (granted ? 2 : 0, 2); });
+        juce::RuntimePermissions::request(juce::RuntimePermissions::recordAudio,
+            [&](bool granted) { setAudioChannels(granted ? 2 : 0, 2); });
     }
     else
     {
         // Specify the number of input and output channels that we want to open
-        setAudioChannels (2, 2);
+        setAudioChannels(2, 2);
     }
 
-	if (!oscReceiver.connect(7000))
-	{
-		DBG("Error: could not connect to UDP port 7000.");
-	}
-	else
-	{
+    if (!oscReceiver.connect(7000))
+    {
+        DBG("Error: could not connect to UDP port 7000.");
+    }
+    else
+    {
         DBG("Listening for OSC messages on UDP port 7000.");
-		oscReceiver.addListener(this, "/int");
-        oscReceiver.addListener(this, "/float");
-	}
+        oscReceiver.addListener(this, "/pinch_value");
+    }
     setSize(1000, 600);
-  
+
 }
 
 MainComponent::~MainComponent()
 {
-	oscReceiver.removeListener(this);
-	oscReceiver.disconnect();
+    oscReceiver.removeListener(this);
+    oscReceiver.disconnect();
 
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
 
 //==============================================================================
-void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
+void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 {
     // This function will be called when the audio device is started, or when
     // its settings (i.e. sample rate, block size, etc) are changed.
@@ -57,7 +56,7 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     // For more details, see the help for AudioProcessor::prepareToPlay()
 }
 
-void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
+void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 {
     // Your audio-processing code goes here!
 
@@ -82,54 +81,29 @@ void MainComponent::releaseResources()
 }
 
 //==============================================================================
-void MainComponent::paint (juce::Graphics& g)
+void MainComponent::paint(juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 
     // You can add your drawing code here!
 }
 
 void MainComponent::resized()
 {
-	audioSetupComp->setBounds(getLocalBounds());
+    audioSetupComp->setBounds(getLocalBounds());
 }
 
-/*void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
+void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 {
-	if (message.size() > 0)
+    auto address = message.getAddressPattern().toString();
+
+    if (address == "/pinch_value")
     {
-        if (message[0].isInt32())
+        if (message.size() > 0 && message[0].isFloat32())
         {
-			int value = message[0].getInt32();
-			DBG("Received int: " << value);
-        }
-        else if (message[0].isFloat32())
-        {
-			float value = message[0].getFloat32();
-			DBG("Received float: " << value);
+            float value = message[0].getFloat32();
+            DBG("Received pinch value: " << value);
         }
     }
-}*/
-
-void MainComponent::oscMessageReceived(const juce::OSCMessage& message) 
-{ 
-    auto address = message.getAddressPattern().toString(); 
-    
-    if (address == "/int") 
-    { 
-        if (message.size() > 0 && message[0].isInt32()) 
-        { 
-            int value = message[0].getInt32(); 
-            DBG("Received int: " << value); 
-        } 
-    } 
-    else if (address == "/float") 
-    { 
-        if (message.size() > 0 && message[0].isFloat32()) 
-        { 
-            float value = message[0].getFloat32(); 
-            DBG("Received float: " << value); 
-        } 
-    } 
 }
