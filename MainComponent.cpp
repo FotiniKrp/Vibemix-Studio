@@ -1,12 +1,14 @@
 #include "MainComponent.h"
 
 //==============================================================================
-MainComponent::MainComponent()
+MainComponent::MainComponent() : juce::AudioAppComponent(myDeviceManager),
+    oscReceiver()
 {
+	myDeviceManager.initialise(2, 2, nullptr, true);
+    audioSetupComp.reset(new juce::AudioDeviceSelectorComponent(myDeviceManager, 0, 2, 0, 2, true, true, true, true));
+	addAndMakeVisible(audioSetupComp.get());
     // Make sure you set the size of the component after
     // you add any child components.
-    setSize (800, 600);
-
     // Some platforms require permissions to open input channels so request that here
     if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
         && ! juce::RuntimePermissions::isGranted (juce::RuntimePermissions::recordAudio))
@@ -19,10 +21,25 @@ MainComponent::MainComponent()
         // Specify the number of input and output channels that we want to open
         setAudioChannels (2, 2);
     }
+
+	if (!oscReceiver.connect(7000))
+	{
+		juce::Logger::writeToLog("Error: could not connect to UDP port 7000.");
+	}
+	else
+	{
+        juce::Logger::writeToLog("Listening for OSC messages on UDP port 7000.");
+		oscReceiver.addListener(this, "/number");
+	}
+    setSize(1000, 600);
+  
 }
 
 MainComponent::~MainComponent()
 {
+	oscReceiver.removeListener(this);
+	oscReceiver.disconnect();
+
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
@@ -47,7 +64,12 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
 
     // Right now we are not producing any data, in which case we need to clear the buffer
     // (to prevent the output of random noise)
-    bufferToFill.clearActiveBufferRegion();
+    auto& inputBuffer = *bufferToFill.buffer;
+
+    for (int channel = 0; channel < bufferToFill.buffer->getNumChannels(); ++channel)
+    {
+        bufferToFill.buffer->copyFrom(channel, bufferToFill.startSample, inputBuffer, channel, bufferToFill.startSample, bufferToFill.numSamples);
+    }
 }
 
 void MainComponent::releaseResources()
@@ -69,7 +91,23 @@ void MainComponent::paint (juce::Graphics& g)
 
 void MainComponent::resized()
 {
-    // This is called when the MainContentComponent is resized.
-    // If you add any child components, this is where you should
-    // update their positions.
+	audioSetupComp->setBounds(getLocalBounds());
+}
+
+void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
+{
+	if (message.getAddressPattern().toString() == "/number")
+	{
+		if (message.size() > 0 && message[0].isInt32())
+		{
+			int receivedValue = message[0].getInt32();
+			juce::Logger::writeToLog("Received OSC message: " + juce::String(receivedValue));
+            // Επειδή βάλαμε MessageLoopCallback, μπορείς να πειράξεις UI elements απευθείας:
+            // mySlider.setValue(myFeature);
+		}
+		else
+		{
+			juce::Logger::writeToLog("Received OSC message with unexpected data type or size.");
+		}
+	}
 }

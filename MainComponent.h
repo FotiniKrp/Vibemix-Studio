@@ -7,7 +7,8 @@
     This component lives inside our window, and this is where you should put all
     your controls and content.
 */
-class MainComponent  : public juce::AudioAppComponent
+class MainComponent  : public juce::AudioAppComponent,
+	private juce::OSCReceiver::ListenerWithOSCAddress<juce::OSCReceiver::MessageLoopCallback>
 {
 public:
     //==============================================================================
@@ -26,7 +27,9 @@ public:
 private:
     //==============================================================================
     // Your private member variables go here...
-
-
+    void oscMessageReceived(const juce::OSCMessage& message) override;
+	juce::OSCReceiver oscReceiver;
+    juce::AudioDeviceManager myDeviceManager;
+	std::unique_ptr<juce::AudioDeviceSelectorComponent> audioSetupComp;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
