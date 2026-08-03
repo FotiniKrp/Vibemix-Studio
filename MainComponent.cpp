@@ -1,7 +1,8 @@
 #include "MainComponent.h"
 
 //==============================================================================
-MainComponent::MainComponent() : juce::AudioAppComponent(myDeviceManager)
+MainComponent::MainComponent() : juce::AudioAppComponent(myDeviceManager),
+    oscReceiver()
 {
 	myDeviceManager.initialise(2, 2, nullptr, true);
     audioSetupComp.reset(new juce::AudioDeviceSelectorComponent(myDeviceManager, 0, 2, 0, 2, true, true, true, true));
@@ -20,12 +21,26 @@ MainComponent::MainComponent() : juce::AudioAppComponent(myDeviceManager)
         // Specify the number of input and output channels that we want to open
         setAudioChannels (2, 2);
     }
+
+	if (!oscReceiver.connect(7000))
+	{
+		DBG("Error: could not connect to UDP port 7000.");
+	}
+	else
+	{
+        DBG("Listening for OSC messages on UDP port 7000.");
+		oscReceiver.addListener(this, "/int");
+        oscReceiver.addListener(this, "/float");
+	}
     setSize(1000, 600);
   
 }
 
 MainComponent::~MainComponent()
 {
+	oscReceiver.removeListener(this);
+	oscReceiver.disconnect();
+
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
@@ -78,4 +93,43 @@ void MainComponent::paint (juce::Graphics& g)
 void MainComponent::resized()
 {
 	audioSetupComp->setBounds(getLocalBounds());
+}
+
+/*void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
+{
+	if (message.size() > 0)
+    {
+        if (message[0].isInt32())
+        {
+			int value = message[0].getInt32();
+			DBG("Received int: " << value);
+        }
+        else if (message[0].isFloat32())
+        {
+			float value = message[0].getFloat32();
+			DBG("Received float: " << value);
+        }
+    }
+}*/
+
+void MainComponent::oscMessageReceived(const juce::OSCMessage& message) 
+{ 
+    auto address = message.getAddressPattern().toString(); 
+    
+    if (address == "/int") 
+    { 
+        if (message.size() > 0 && message[0].isInt32()) 
+        { 
+            int value = message[0].getInt32(); 
+            DBG("Received int: " << value); 
+        } 
+    } 
+    else if (address == "/float") 
+    { 
+        if (message.size() > 0 && message[0].isFloat32()) 
+        { 
+            float value = message[0].getFloat32(); 
+            DBG("Received float: " << value); 
+        } 
+    } 
 }
