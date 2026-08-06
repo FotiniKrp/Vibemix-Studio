@@ -29,7 +29,6 @@ oscReceiver()
     else
     {
         DBG("Listening for OSC messages on UDP port 7000.");
-        // oscReceiver.addListener(this, "/pinch_value");
 		oscReceiver.addListener(this, "/is_fist");
 		oscReceiver.addListener(this, "/is_horns");
 		oscReceiver.addListener(this, "/is_shaka");
@@ -107,14 +106,6 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 {
     auto address = message.getAddressPattern().toString();
 
-    /*if (address == "/pinch_value")
-    {
-        if (message.size() > 0 && message[0].isFloat32())
-        {
-            float value = message[0].getFloat32();
-            DBG("Received pinch value: " << value);
-        }
-    }*/
 	if (address == "/is_fist")
 	{
 		if (message.size() > 0 && message[0].isInt32())
