@@ -4,59 +4,63 @@ import itertools
 def distance(a, b):
     return math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2)
 
+def thumb_extended(lm):
+    return distance (lm[4], lm[17]) > distance(lm[0], lm[17])
+def index_extended(lm):
+    return distance(lm[8], lm[0]) > distance(lm[6], lm[0])
+def middle_extended(lm):
+    return distance(lm[12], lm[0]) > distance(lm[10], lm[0])
+def ring_extended(lm):
+    return distance(lm[16], lm[0]) > distance(lm[14], lm[0])
+def pinky_extended(lm):
+    return distance(lm[20], lm[0]) > distance(lm[18], lm[0])
+
 def palm_facing_camera(lm):
     # Check if the palm is facing the camera by comparing the z-coordinates of the wrist and thumb tip
     return lm[17].z < lm[4].z
 
 def is_open_hand(lm):
     return (
-        lm[8].y < lm[6].y and   # index up
-        lm[12].y < lm[10].y and # middle up
-        lm[16].y < lm[14].y and # ring up
-        lm[20].y < lm[18].y     # pinky up
+        index_extended(lm) and
+        middle_extended(lm) and
+        ring_extended(lm) and
+        pinky_extended(lm)
     )
 
-def is_fist(is_hand_right, lm):
-    return (
-        lm[8].y > lm[5].y and   # index down
-        lm[12].y > lm[9].y and  # middle down
-        lm[16].y > lm[13].y and # ring down
-        lm[20].y > lm[17].y and # pinky down
-        (lm[4].x < lm[1].x if is_hand_right 
-         else lm[4].x > lm[1].x)  # thumb tucked
+def is_fist(lm):
+    return not (
+        thumb_extended(lm) or
+        index_extended(lm) or
+        middle_extended(lm) or
+        ring_extended(lm) or
+        pinky_extended(lm)
     )
 
-def is_peace_sign(is_hand_right, lm):
+def is_peace_sign(lm):
    return(
-      lm[8].y < lm[6].y and   # index up
-      lm[12].y < lm[10].y and # middle up
-      lm[16].y > lm[14].y and # ring up
-      lm[20].y > lm[18].y and # pinky up
-      (lm[4].x < lm[1].x if is_hand_right 
-       else lm[4].x > lm[1].x)  # thumb tucked
+      not thumb_extended(lm) and
+      index_extended(lm) and
+      middle_extended(lm) and
+      not ring_extended(lm) and
+      not pinky_extended(lm)
    )
 
-def is_horns_gesture(is_hand_right, lm):
+def is_horns_gesture(lm):
     return (
-        lm[8].y < lm[6].y and    # index up
-        lm[20].y < lm[18].y and  # pinky up
-        lm[12].y > lm[10].y and  # middle down
-        lm[16].y > lm[14].y and  # ring down
-        (lm[4].x < lm[1].x if is_hand_right 
-         else lm[4].x > lm[1].x)  # thumb tucked
+        not thumb_extended(lm) and
+        index_extended(lm) and
+        not middle_extended(lm) and
+        not ring_extended(lm) and
+        pinky_extended(lm)
     )
 
-def is_shaka_gesture(is_hand_right, lm):
+def is_shaka_gesture(lm):
     return (
-        lm[4].y < lm[3].y and   # thumb extended upwards
-        (lm[6].x < lm[8].x if not is_hand_right 
-         else lm[6].x > lm[8].x) and # index tucked
-        (lm[10].x < lm[12].x if not is_hand_right 
-        else lm[10].x > lm[12].x) and # middle tucked
-        (lm[14].x < lm[16].x if not is_hand_right 
-        else lm[14].x > lm[16].x) and # ring tucked
-        (lm[20].x < lm[18].x if not is_hand_right 
-        else lm[20].x > lm[18].x)  # pinky extended outwards
+        thumb_extended(lm) and
+        not index_extended(lm) and
+        not middle_extended(lm) and
+        not ring_extended(lm) and
+        pinky_extended(lm)
     )
 
 def open_palms_parallel(lm1, lm2):
@@ -71,9 +75,10 @@ def hands_distance(lm1, lm2):
     return max(0.0, min(1.0, norm))
 
 def is_hand_openness_gesture(lm):
-    return (lm[12].y < lm[9].y and  # middle stretched
-            lm[16].y < lm[13].y and  # ring stretched
-            lm[20].y < lm[17].y)     # pinky stretched
+    return (distance(lm[8], lm[0]) > distance(lm[5], lm[0]) and  # index stretched
+            distance (lm[12], lm[0]) > distance(lm[9], lm[0]) and  # middle stretched
+            distance(lm[16], lm[0]) > distance(lm[13], lm[0]) and  # ring stretched
+            distance(lm[20], lm[0]) > distance(lm[17], lm[0]))     # pinky stretched
 def hand_openness_value(lm):
     MIN_OPEN = 0.20; MAX_OPEN = 1.05
     fingertips = [
@@ -98,10 +103,12 @@ def hand_openness_value(lm):
     return max(0.0, min(1.0, openness))
 
 def is_pinch_gesture(lm):
-    return (lm[12].y > lm[9].y and   # middle tucked
-            lm[16].y > lm[13].y and  # ring tucked
-            lm[20].y > lm[17].y and  # pinky tucked
-            lm[8].y < lm[5].y)         # index up
+    return (
+        index_extended(lm) and
+        not middle_extended(lm) and
+        not ring_extended(lm) and
+        not pinky_extended(lm)   
+    )
 def pinch_value(lm):
     thumb = lm[4]
     index = lm[8]

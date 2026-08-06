@@ -35,7 +35,7 @@ for i in custom_connection_style:
     custom_connection_style[i].thickness = 2
 
 
-def draw_landmarks_on_image(rgb_image, detection_result, is_pinch=False, parallel_palms=False):
+def draw_landmarks_on_image(rgb_image, detection_result, pinch_values=None, parallel_palms=False):
     hand_landmarks_list = detection_result.hand_landmarks
     handedness_list = detection_result.handedness
     annotated_image = np.copy(rgb_image)
@@ -43,6 +43,7 @@ def draw_landmarks_on_image(rgb_image, detection_result, is_pinch=False, paralle
     for idx in range(len(hand_landmarks_list)):
         hand_landmarks = hand_landmarks_list[idx]
         handedness = handedness_list[idx]
+        hand_label = handedness[0].category_name
 
         mp_drawing.draw_landmarks(
             annotated_image,
@@ -54,7 +55,7 @@ def draw_landmarks_on_image(rgb_image, detection_result, is_pinch=False, paralle
         
         height, width, _ = annotated_image.shape
 
-        if is_pinch:
+        if pinch_values and pinch_values[hand_label] is not None:
             thumb_tip = hand_landmarks[4]
             index_tip = hand_landmarks[8]
             thumb_x, thumb_y = int(thumb_tip.x * width), int(thumb_tip.y * height)
@@ -135,14 +136,12 @@ def camera_loop():
         detection_result = detector.detect_for_video(mp_image, frame_timestamp_ms)
 
         is_fist = False
-        is_pinch = False
-        is_open_hand_gradient = False
         is_horns = False
         is_shaka = False
-        parallel_palms = False
         is_peace = False
-        pinch_value = 0.0
-        hand_openness_value = 0.0
+        pinch_values = {"Right": None, "Left": None}
+        hand_openness_values = {"Right": None, "Left": None}
+        parallel_palms = False
         distance = 0.0
 
         if detection_result.hand_landmarks:
@@ -150,19 +149,23 @@ def camera_loop():
                 hand_label = detection_result.handedness[i][0].category_name
 
                 if not is_fist:
-                    is_fist = gestures.is_fist(hand_label == "Right", hand)
-                if not is_pinch:
-                    is_pinch = gestures.is_pinch_gesture(hand)
-                    pinch_value = gestures.pinch_value(hand)
-                if not is_open_hand_gradient:
-                    is_open_hand_gradient = gestures.is_hand_openness_gesture(hand)
-                    hand_openness_value = gestures.hand_openness_value(hand)
+                    is_fist = gestures.is_fist(hand)
+                if gestures.is_pinch_gesture(hand):
+                    if hand_label == "Right":
+                        pinch_values["Right"] = gestures.pinch_value(hand)
+                    elif hand_label == "Left":
+                        pinch_values["Left"] = gestures.pinch_value(hand)
+                if gestures.is_hand_openness_gesture(hand):
+                    if hand_label == "Right":
+                        hand_openness_values["Right"] = gestures.hand_openness_value(hand)
+                    elif hand_label == "Left":
+                        hand_openness_values["Left"] = gestures.hand_openness_value(hand)
                 if not is_horns:
-                    is_horns = gestures.is_horns_gesture(hand_label == "Right", hand)
+                    is_horns = gestures.is_horns_gesture(hand)
                 if not is_shaka:
-                    is_shaka = gestures.is_shaka_gesture(hand_label == "Right", hand)
+                    is_shaka = gestures.is_shaka_gesture(hand)
                 if not is_peace:
-                    is_peace = gestures.is_peace_sign(hand_label == "Right", hand)
+                    is_peace = gestures.is_peace_sign(hand)
 
             if len(detection_result.hand_landmarks) == 2:
                 hand1 = detection_result.hand_landmarks[0]
@@ -175,10 +178,14 @@ def camera_loop():
             # OSC Telemetry
             if is_fist:
                 client.send_message("/is_fist", int(is_fist))
-            if is_pinch:
-                client.send_message("/pinch_value", float(pinch_value))
-            if is_open_hand_gradient:
-                client.send_message("/hand_openness_value", float(hand_openness_value))
+            if pinch_values["Right"] is not None:
+                client.send_message("/pinch_value_right", float(pinch_values["Right"]))
+            if pinch_values["Left"] is not None:
+                client.send_message("/pinch_value_left", float(pinch_values["Left"]))
+            if hand_openness_values["Right"] is not None:
+                client.send_message("/hand_openness_value_right", float(hand_openness_values["Right"]))
+            if hand_openness_values["Left"] is not None:
+                client.send_message("/hand_openness_value_left", float(hand_openness_values["Left"]))
             if is_horns:
                 client.send_message("/is_horns", int(is_horns))
             if is_shaka:
@@ -188,7 +195,7 @@ def camera_loop():
             if is_peace:
                 client.send_message("/is_peace", int(is_peace))
 
-        annotated = draw_landmarks_on_image(rgb_frame, detection_result, is_pinch, parallel_palms)
+        annotated = draw_landmarks_on_image(rgb_frame, detection_result, pinch_values, parallel_palms)
         annotated_bgr = cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR)
 
         success_encode, buffer = cv2.imencode(".jpg", annotated_bgr)
