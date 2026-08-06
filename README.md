@@ -69,3 +69,14 @@ thread saftey:
 5. Choir εφε
 6. Singing in empty church or something
 7. glitch voice -> κλεινει η παλαμη π.χ. κι κολλαει
+
+   vocoder
+```text
+[Φωνή / Modulator] ──➔ Band-Pass Filters ──➔ Envelope Followers ──┐
+                                                                 │ (Πολλαπλασιασμός)
+[Synth / Carrier]   ──➔ Band-Pass Filters ───────────────────────┴──➔ [Ρομποτική Φωνή]
+```
+Υλοποίηση στο JUCE
+Στο JUCE δεν χρειάζεται να φτιάξεις το Vocoder από το μηδέν.
+juce::dsp Modules: Φιλτράρισμα με παράλληλα IIR::Filter (Filterbank) + ένα απλό juce::dsp::Oscillator για Carrier.
+Έτοιμα Open-Source C++ Vocoder DSP Modules: Υπάρχουν έτοιμες ελαφριές C++ βιβλιοθήκες (π.χ. SoundpipeVocoder) που ενσωματώνονται εύκολα στο Audio Thread του JUCE.
