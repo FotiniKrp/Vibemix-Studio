@@ -29,7 +29,16 @@ oscReceiver()
     else
     {
         DBG("Listening for OSC messages on UDP port 7000.");
-        oscReceiver.addListener(this, "/pinch_value");
+        // oscReceiver.addListener(this, "/pinch_value");
+		oscReceiver.addListener(this, "/is_fist");
+		oscReceiver.addListener(this, "/is_horns");
+		oscReceiver.addListener(this, "/is_shaka");
+		oscReceiver.addListener(this, "/is_peace");
+		oscReceiver.addListener(this, "/pinch_value_right");
+		oscReceiver.addListener(this, "/pinch_value_left");
+		oscReceiver.addListener(this, "/hand_openness_value_right");
+		oscReceiver.addListener(this, "/hand_openness_value_left");
+		oscReceiver.addListener(this, "/parallel_palms_distance");
     }
     setSize(1000, 600);
 
@@ -98,12 +107,84 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 {
     auto address = message.getAddressPattern().toString();
 
-    if (address == "/pinch_value")
+    /*if (address == "/pinch_value")
     {
         if (message.size() > 0 && message[0].isFloat32())
         {
             float value = message[0].getFloat32();
             DBG("Received pinch value: " << value);
         }
-    }
+    }*/
+	if (address == "/is_fist")
+	{
+		if (message.size() > 0 && message[0].isInt32())
+		{
+			int value = message[0].getInt32();
+			DBG("Received is_fist value: " << value);
+		}
+	}
+	if (address == "/is_horns")
+	{
+		if (message.size() > 0 && message[0].isInt32())
+		{
+			int value = message[0].getInt32();
+			DBG("Received is_horns value: " << value);
+		}
+	}
+	if (address == "/is_shaka")
+	{
+		if (message.size() > 0 && message[0].isInt32())
+		{
+			int value = message[0].getInt32();
+			DBG("Received is_shaka value: " << value);
+		}
+	}
+	if (address == "/is_peace")
+	{
+		if (message.size() > 0 && message[0].isInt32())
+		{
+			int value = message[0].getInt32();
+			DBG("Received is_peace value: " << value);
+		}
+	}
+	if (address == "/pinch_value_right")
+	{
+		if (message.size() > 0 && message[0].isFloat32())
+		{
+			float value = message[0].getFloat32();
+			DBG("Received right-handed pinch value: " << value);
+		}
+	}
+	if (address == "/pinch_value_left")
+	{
+		if (message.size() > 0 && message[0].isFloat32())
+		{
+			float value = message[0].getFloat32();
+			DBG("Received left-handed pinch value: " << value);
+		}
+	}
+	if (address == "/hand_openness_value_right")
+	{
+		if (message.size() > 0 && message[0].isFloat32())
+		{
+			float value = message[0].getFloat32();
+			DBG("Received right-handed hand_openness_value: " << value);
+		}
+	}
+	if (address == "/hand_openness_value_left")
+	{
+		if (message.size() > 0 && message[0].isFloat32())
+		{
+			float value = message[0].getFloat32();
+			DBG("Received left-handed hand_openness_value: " << value);
+		}
+	}
+	if (address == "/parallel_palms_distance")
+	{
+		if (message.size() > 0 && message[0].isFloat32())
+		{
+			float value = message[0].getFloat32();
+			DBG("Received parallel_palms_distance: " << value);
+		}
+	}
 }
