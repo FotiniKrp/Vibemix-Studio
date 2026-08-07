@@ -1,6 +1,8 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <juce_dsp/juce_dsp.h>
+#include <atomic>
 
 //==============================================================================
 /*
@@ -32,4 +34,11 @@ private:
     juce::AudioDeviceManager myDeviceManager;
 	std::unique_ptr<juce::AudioDeviceSelectorComponent> audioSetupComp;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
+
+    std::atomic<float> pinch_right{ 0.0f };
+    std::atomic<uint32_t> last_pinch_right{ 0 };
+
+    const uint32_t timeoutThresholdMs = 200;
+
+	juce::dsp::Reverb reverb; //initialize reverb processor
 };
