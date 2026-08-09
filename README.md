@@ -4,12 +4,9 @@ Video Branch
 opencv, mediapipe σε python
 
 Audio Branch
-
-βιβλιοθήκες: sounddevice, pedalboard, vocoder άκυρο python έχει καθυστέρηση 
-JUCE framework(C++) επικοινωνεί απευθείας με hardware
-+ OSC για επικοινωνία με Python εφόσον τρέχει στον ίδιο υπολογιστή, τα μηνύματα μπορούν να ταξιδέψουν εσωτερικά μέσω της διεύθυνσης Localhost (δηλαδή την IP: 127.0.0.1).
-
-Web sockets για επικοινωνία python output με react app!! to do
+JUCE framework(C++) 
++ OSC για επικοινωνία με Python 
+Web sockets για επικοινωνία python output με react app!!
 
 For johnny: Αν αλλάζεις το roomSize του DSP Reverb ακαριαία κάθε φορά που φτάνει ένα OSC πακέτο, ο ήχος θα κάνει ψηφιακά "clicks" / "zipper noise".
 -> Χρησιμοποιούμε ένα juce::SmoothedValue για να δημιουργήσουμε μια ομαλή γραμμική μετάβαση από δείγμα σε δείγμα.
@@ -70,6 +67,7 @@ thread saftey:
 6. Singing in empty church or something
 7. glitch voice -> κλεινει η παλαμη π.χ. κι κολλαει
 
+--> να υπάρχει κάποιο looping mechanism?
    vocoder
 ```text
 [Φωνή / Modulator] ──➔ Band-Pass Filters ──➔ Envelope Followers ──┐
